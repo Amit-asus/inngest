@@ -107,3 +107,90 @@ export const login = async (req, res) => {
       .json({ error: "Login failed", details: error.message });
   }
 };
+
+export const logout = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized token" });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decode) => {
+      if (err) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // If you want real logout, you'd add token to blacklist here
+      res.json({ message: "Logout Successful" });
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Server error", details: error.message });
+  }
+};
+
+export const updateUser = async (req, res, next) => {
+  try {
+    // 1) ensure authentication middleware ran
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // 2) only admins allowed
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // 3) sanitize inputs
+    const { email: rawEmail, skills, name, role } = req.body;
+    if (!rawEmail) {
+      return res.status(400).json({ error: "email is required" });
+    }
+    const email = String(rawEmail).trim().toLowerCase();
+
+    // 4) find the user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // 5) build update object carefully
+    const update = {};
+    if (typeof name === "string" && name.trim().length) update.name = name.trim();
+
+    // If you want "empty array should clear skills", allow empty array.
+    // If you want empty -> keep existing, use: (Array.isArray(skills) && skills.length)
+    if (Array.isArray(skills)) {
+      update.skills = skills; // will set to [] if frontend explicitly sends []
+    }
+
+    // preserve existing role if role not provided
+    if (typeof role === "string" && role.trim().length) {
+      update.role = role.trim();
+    }
+
+    // if update object is empty, nothing to change
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ error: "No valid fields provided to update" });
+    }
+
+    // 6) perform update and return the updated user
+    const updatedUser = await User.findOneAndUpdate(
+      { email },
+      { $set: update },
+      { new: true, runValidators: true, context: "query" }
+    ).select("-password"); // hide password
+
+    return res.json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Update Failed", details: error.message });
+  }
+};

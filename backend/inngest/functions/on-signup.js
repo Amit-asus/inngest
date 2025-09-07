@@ -18,6 +18,7 @@ const helloWorld = inngest.createFunction(
           throw new NonRetriableError("User not found");
         }
         return userObject;
+        
       });
 
       //step 2 sending welcome email
