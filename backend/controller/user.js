@@ -3,9 +3,6 @@ import User from "../models/user";
 import jwt from "jsonwebtoken";
 import inngest from "../inngest/client";
 
-/**
- * Signup
- */
 export const signup = async (req, res) => {
   try {
     // step 1 : getting the data from the request
@@ -73,9 +70,6 @@ export const signup = async (req, res) => {
   }
 };
 
-/**
- * Login
- */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -162,7 +156,8 @@ export const updateUser = async (req, res, next) => {
 
     // 5) build update object carefully
     const update = {};
-    if (typeof name === "string" && name.trim().length) update.name = name.trim();
+    if (typeof name === "string" && name.trim().length)
+      update.name = name.trim();
 
     // If you want "empty array should clear skills", allow empty array.
     // If you want empty -> keep existing, use: (Array.isArray(skills) && skills.length)
@@ -177,7 +172,9 @@ export const updateUser = async (req, res, next) => {
 
     // if update object is empty, nothing to change
     if (Object.keys(update).length === 0) {
-      return res.status(400).json({ error: "No valid fields provided to update" });
+      return res
+        .status(400)
+        .json({ error: "No valid fields provided to update" });
     }
 
     // 6) perform update and return the updated user
@@ -187,10 +184,28 @@ export const updateUser = async (req, res, next) => {
       { new: true, runValidators: true, context: "query" }
     ).select("-password"); // hide password
 
-    return res.json({ message: "User updated successfully", user: updatedUser });
+    return res.json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     return res
       .status(500)
       .json({ error: "Update Failed", details: error.message });
+  }
+};
+
+export const getUsers = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const users = await User.find().select("-password"); // exclude password
+    return res.json(users);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Fetch Failed", details: error.message });
   }
 };

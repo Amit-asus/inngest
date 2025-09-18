@@ -4,7 +4,7 @@ import { NonRetriableError } from "inngest";
 import { sendEmail } from "../../utils/mailer";
 
 // Your new function:
-const helloWorld = inngest.createFunction(
+export const onUserSignup = inngest.createFunction(
   { id: "on-user-signup", retries: 2 },
   { event: "user/signUp" },
   async ({ event, step }) => {
@@ -18,7 +18,6 @@ const helloWorld = inngest.createFunction(
           throw new NonRetriableError("User not found");
         }
         return userObject;
-        
       });
 
       //step 2 sending welcome email
@@ -35,6 +34,3 @@ const helloWorld = inngest.createFunction(
     }
   }
 );
-
-// Add the function to the exported array:
-export const functions = [helloWorld];
